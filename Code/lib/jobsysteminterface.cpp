@@ -36,7 +36,7 @@ void JobSystemInterface::CreateThreads()
 std::string JobSystemInterface::CreateJob(std::string input)
 {
     json temp = json::parse(input);
-    int jobID = js->CreateJob(temp["job_type"], temp["input"]);
+    int jobID = js->CreateJob(temp["job_type"], temp["input"].dump());
     temp["id"] = jobID;
     return temp.dump();
 }

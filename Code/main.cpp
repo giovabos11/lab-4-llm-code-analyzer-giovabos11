@@ -4,39 +4,83 @@
 
 using namespace std;
 
-// Example Job 1
-string sortString(string a)
+// Job that calls LLM
+string callLLM(string a)
 {
-    int i, key, j, n = a.size();
-    for (i = 1; i < n; i++)
-    {
-        key = a[i];
-        j = i - 1;
-        while (j >= 0 && a[j] > key)
-        {
-            a[j + 1] = a[j];
-            j = j - 1;
-        }
-        a[j + 1] = key;
-    }
-    return a;
-}
+    json input = json::parse(a);
+    string output;
+    int returnCode;
+    array<char, 2048> buffer;
 
-// Example Job 2
-string crazyCase(string a)
-{
-    for (int i = 0; i < a.size(); i++)
+    // Build command to execute script
+    string command;
+    if (!input.contains("key"))
     {
-        if (i % 2 == 0)
+        command = "python callLLM.py --ip " + input["ip"].dump();
+        command += " --prompt " + input["prompt"].dump();
+        command += " --model " + input["model"].dump();
+    }
+    else
+    {
+        command = "python callLLM.py --ip " + input["ip"].dump();
+        command += " --prompt " + input["prompt"].dump();
+        command += " --model " + input["model"].dump();
+        command += " -k " + input["key"].dump();
+    }
+
+    // Redirect cerr to cout
+    command.append(" 2>&1");
+
+    // Open pile and run command
+#ifdef __linux__
+    FILE *pipe = popen(command.c_str(), "r");
+#elif _WIN32
+    FILE *pipe = _popen(command.c_str(), "r");
+#else
+    FILE *pipe = popen(command.c_str(), "r");
+#endif
+
+    if (!pipe)
+    {
+        return "Failed to open pipe";
+    }
+
+    // Read until the end of the process
+    while (fgets(buffer.data(), 2048, pipe) != NULL)
+    {
+        output.append(buffer.data());
+    }
+
+    // Close pipe and get the return code
+#ifdef __linux__
+    returnCode = pclose(pipe);
+#elif _WIN32
+    returnCode = _pclose(pipe);
+#else
+    returnCode = pclose(pipe);
+#endif
+
+    try
+    {
+        output = json::parse(output)["choices"][0]["text"].dump();
+    }
+    catch (const json::parse_error &e)
+    {
+        if (output.find("usage: callLLM.py [-h] -i IP -p PROMPT -m MODEL [-k KEY]") != string::npos)
         {
-            a[i] = toupper(a[i]);
+            output = "Invalid arguments provided";
+        }
+        else if (output.find("Connection error") != string::npos)
+        {
+            output = "LLM connection error";
         }
         else
         {
-            a[i] = tolower(a[i]);
+            output = "JSON Error";
         }
     }
-    return a;
+
+    return output;
 }
 
 int main()
@@ -48,37 +92,26 @@ int main()
     js.CreateThreads();
 
     // Register all jobs
-    js.RegisterJob("sort_string", new Job(sortString, 1));
-    js.RegisterJob("crazy_case", new Job(crazyCase, 2));
-
-    // Get all job types available
-    json jobTypes = json::parse(js.GetJobTypes());
-    cout << "Job types available: " << endl;
-    for (int i = 0; i < jobTypes.size(); i++)
-    {
-        cout << jobTypes[i] << endl;
-    }
+    js.RegisterJob("call_LLM", new Job(callLLM, 1));
 
     // Spin off jobs
-    string job1 = js.CreateJob("{\"job_type\": \"sort_string\", \"input\": \"jdrbfkjdb\"}");
-    string job2 = js.CreateJob("{\"job_type\": \"sort_string\", \"input\": \"abcd\"}");
-    string job3 = js.CreateJob("{\"job_type\": \"sort_string\", \"input\": \"twuigui\"}");
-    string job4 = js.CreateJob("{\"job_type\": \"sort_string\", \"input\": \"giovanni\"}");
+    string job1 = js.CreateJob("{\"job_type\": \"call_LLM\", \"input\": {\"ip\": \"http://localhost:4891/v1\", \"prompt\": \"Who is Steve Jobs?\", \"model\": \"gpt4all-falcon-q4_0\"}}");
+    string job2 = js.CreateJob("{\"job_type\": \"call_LLM\", \"input\": {\"ip\": \"http://localhost:4891/v1\", \"prompt\": \"Who is Alan Turing?\", \"model\": \"gpt4all-falcon-q4_0\"}}");
+    string job3 = js.CreateJob("{\"job_type\": \"call_LLM\", \"input\": {\"ip\": \"http://localhost:4891/v1\", \"prompt\": \"Who is Nikola Tesla?\", \"model\": \"gpt4all-falcon-q4_0\"}}");
 
     // Get job IDs
     int job1ID = json::parse(job1)["id"];
     int job2ID = json::parse(job2)["id"];
     int job3ID = json::parse(job3)["id"];
-    int job4ID = json::parse(job4)["id"];
 
     // Get Job statuses
     cout << "Job ID " << job1ID << " status: " << json::parse(js.JobStatus(job1))["status"] << endl;
     cout << "Job ID " << job2ID << " status: " << json::parse(js.JobStatus(job2))["status"] << endl;
-    cout << "Job ID " << job3ID << " status: " << json::parse(js.JobStatus(job3))["status"] << endl;
-    cout << "Job ID " << job4ID << " status: " << json::parse(js.JobStatus(job4))["status"] << endl;
+    cout << "Job ID " << job3ID << " status: " << json::parse(js.JobStatus(job3))["status"] << endl
+         << endl;
 
     // Check job status and try to complete the jobs
-    string output1, output2, output3, output4;
+    string output1, output2, output3;
 
     while (json::parse(js.AreJobsRunning())["are_jobs_running"])
     {
@@ -89,50 +122,19 @@ int main()
     output1 = json::parse(js.CompleteJob(job1))["output"];
     output2 = json::parse(js.CompleteJob(job2))["output"];
     output3 = json::parse(js.CompleteJob(job3))["output"];
-    output4 = json::parse(js.CompleteJob(job4))["output"];
+
+    // Print job outputs
+    cout << "Job ID " << job1ID << " output: " << output1 << endl
+         << endl;
+    cout << "Job ID " << job2ID << " output: " << output2 << endl
+         << endl;
+    cout << "Job ID " << job3ID << " output: " << output3 << endl
+         << endl;
 
     // Get Job statuses
     cout << "Job ID " << job1ID << " status: " << json::parse(js.JobStatus(job1))["status"] << endl;
     cout << "Job ID " << job2ID << " status: " << json::parse(js.JobStatus(job2))["status"] << endl;
     cout << "Job ID " << job3ID << " status: " << json::parse(js.JobStatus(job3))["status"] << endl;
-    cout << "Job ID " << job4ID << " status: " << json::parse(js.JobStatus(job4))["status"] << endl;
-
-    // Stop Job System
-    js.StopJobSystem();
-
-    // Resume Job System
-    js.ResumeJobSystem();
-
-    // Spin off different jobs
-    string job5 = js.CreateJob("{\"job_type\": \"crazy_case\", \"input\": \"" + output1 + "\"}");
-    string job6 = js.CreateJob("{\"job_type\": \"crazy_case\", \"input\": \"" + output3 + "\"}");
-    string job7 = js.CreateJob("{\"job_type\": \"crazy_case\", \"input\": \"" + output4 + "\"}");
-
-    // Get job IDs
-    int job5ID = json::parse(job5)["id"];
-    int job6ID = json::parse(job6)["id"];
-    int job7ID = json::parse(job7)["id"];
-
-    while (json::parse(js.AreJobsRunning())["are_jobs_running"])
-    {
-        //  Wait to complete all the jobs
-    }
-    // Destroy job 7 while running
-    js.DestroyJob(job7);
-
-    // Get job outputs
-    output1 = json::parse(js.CompleteJob(job5))["output"];
-    output3 = json::parse(js.CompleteJob(job6))["output"];
-
-    // Get job statuses
-    cout << "Job ID " << job5ID << " status: " << json::parse(js.JobStatus(job5))["status"] << endl;
-    cout << "Job ID " << job6ID << " status: " << json::parse(js.JobStatus(job6))["status"] << endl;
-
-    // Print the outputs
-    cout << "Output: " << output1 << endl;
-    cout << "Output: " << output2 << endl;
-    cout << "Output: " << output3 << endl;
-    cout << "Output: " << output4 << endl;
 
     // Destroy Job System
     js.DestroyJobSystem();
