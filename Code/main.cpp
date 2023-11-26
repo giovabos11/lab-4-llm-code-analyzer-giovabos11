@@ -83,6 +83,23 @@ string callLLM(string a)
     return output;
 }
 
+// Function to open file and return content
+string openFile(string path)
+{
+    string output = "", line = "";
+    ifstream inputFile;
+    inputFile.open(path);
+    if (inputFile.is_open())
+    {
+        while (getline(inputFile, line))
+        {
+            output += line + "\\n";
+        }
+        inputFile.close();
+    }
+    return output;
+}
+
 int main()
 {
     // Create job system object
@@ -94,10 +111,18 @@ int main()
     // Register all jobs
     js.RegisterJob("call_LLM", new Job(callLLM, 1));
 
+    // Import prompt and error files
+    string prompt1, prompt2, error1, error2, error3;
+    prompt1 = openFile("../Data/gpt4all-mistral-prompt.txt");
+    prompt2 = openFile("../Data/gpt4all-falcon-prompt.txt");
+    error1 = openFile("../Data/error1.json");
+    error2 = openFile("../Data/error2.json");
+    error3 = openFile("../Data/error3.json");
+
     // Spin off jobs
-    string job1 = js.CreateJob("{\"job_type\": \"call_LLM\", \"input\": {\"ip\": \"http://localhost:4891/v1\", \"prompt\": \"Who is Steve Jobs?\", \"model\": \"gpt4all-falcon-q4_0\"}}");
-    string job2 = js.CreateJob("{\"job_type\": \"call_LLM\", \"input\": {\"ip\": \"http://localhost:4891/v1\", \"prompt\": \"Who is Alan Turing?\", \"model\": \"gpt4all-falcon-q4_0\"}}");
-    string job3 = js.CreateJob("{\"job_type\": \"call_LLM\", \"input\": {\"ip\": \"http://localhost:4891/v1\", \"prompt\": \"Who is Nikola Tesla?\", \"model\": \"gpt4all-falcon-q4_0\"}}");
+    string job1 = js.CreateJob("{\"job_type\": \"call_LLM\", \"input\": {\"ip\": \"http://localhost:4891/v1\", \"prompt\": \"" + prompt1 + error1 + "\", \"model\": \"mistral-7b-instruct-v0.1.Q4_0\"}}");
+    string job2 = js.CreateJob("{\"job_type\": \"call_LLM\", \"input\": {\"ip\": \"http://localhost:4891/v1\", \"prompt\": \"" + prompt1 + error2 + "\", \"model\": \"mistral-7b-instruct-v0.1.Q4_0\"}}");
+    string job3 = js.CreateJob("{\"job_type\": \"call_LLM\", \"input\": {\"ip\": \"http://localhost:4891/v1\", \"prompt\": \"" + prompt1 + error3 + "\", \"model\": \"mistral-7b-instruct-v0.1.Q4_0\"}}");
 
     // Get job IDs
     int job1ID = json::parse(job1)["id"];
