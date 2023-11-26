@@ -93,6 +93,21 @@ string openFile(string path)
     {
         while (getline(inputFile, line))
         {
+            // Scape characters that can break the JSON object
+            size_t start_pos = 0;
+            string from = "\\", to = "\\\\";
+            while ((start_pos = line.find(from, start_pos)) != std::string::npos)
+            {
+                line.replace(start_pos, from.length(), to);
+                start_pos += to.length();
+            }
+            start_pos = 0;
+            from = "\"", to = "\\\"";
+            while ((start_pos = line.find(from, start_pos)) != std::string::npos)
+            {
+                line.replace(start_pos, from.length(), to);
+                start_pos += to.length();
+            }
             output += line + "\\n";
         }
         inputFile.close();
