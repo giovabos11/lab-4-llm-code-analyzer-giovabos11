@@ -102,7 +102,7 @@ string openFile(string path)
                 start_pos += to.length();
             }
             start_pos = 0;
-            from = "\"", to = "\\\"";
+            from = "\"", to = "\\\"\\\"";
             while ((start_pos = line.find(from, start_pos)) != std::string::npos)
             {
                 line.replace(start_pos, from.length(), to);
