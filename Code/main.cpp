@@ -108,7 +108,7 @@ string openFile(string path)
                 line.replace(start_pos, from.length(), to);
                 start_pos += to.length();
             }
-            output += line + "\\n";
+            output += line + " ";
         }
         inputFile.close();
     }
@@ -138,20 +138,29 @@ int main()
     string job1 = js.CreateJob("{\"job_type\": \"call_LLM\", \"input\": {\"ip\": \"http://localhost:4891/v1\", \"prompt\": \"" + prompt1 + error1 + "\", \"model\": \"mistral-7b-instruct-v0.1.Q4_0\"}}");
     string job2 = js.CreateJob("{\"job_type\": \"call_LLM\", \"input\": {\"ip\": \"http://localhost:4891/v1\", \"prompt\": \"" + prompt1 + error2 + "\", \"model\": \"mistral-7b-instruct-v0.1.Q4_0\"}}");
     string job3 = js.CreateJob("{\"job_type\": \"call_LLM\", \"input\": {\"ip\": \"http://localhost:4891/v1\", \"prompt\": \"" + prompt1 + error3 + "\", \"model\": \"mistral-7b-instruct-v0.1.Q4_0\"}}");
+    string job4 = js.CreateJob("{\"job_type\": \"call_LLM\", \"input\": {\"ip\": \"http://localhost:4891/v1\", \"prompt\": \"" + prompt2 + error1 + "\", \"model\": \"gpt4all-falcon-q4_0\"}}");
+    string job5 = js.CreateJob("{\"job_type\": \"call_LLM\", \"input\": {\"ip\": \"http://localhost:4891/v1\", \"prompt\": \"" + prompt2 + error2 + "\", \"model\": \"gpt4all-falcon-q4_0\"}}");
+    string job6 = js.CreateJob("{\"job_type\": \"call_LLM\", \"input\": {\"ip\": \"http://localhost:4891/v1\", \"prompt\": \"" + prompt2 + error3 + "\", \"model\": \"gpt4all-falcon-q4_0\"}}");
 
     // Get job IDs
     int job1ID = json::parse(job1)["id"];
     int job2ID = json::parse(job2)["id"];
     int job3ID = json::parse(job3)["id"];
+    int job4ID = json::parse(job4)["id"];
+    int job5ID = json::parse(job5)["id"];
+    int job6ID = json::parse(job6)["id"];
 
     // Get Job statuses
     cout << "Job ID " << job1ID << " status: " << json::parse(js.JobStatus(job1))["status"] << endl;
     cout << "Job ID " << job2ID << " status: " << json::parse(js.JobStatus(job2))["status"] << endl;
-    cout << "Job ID " << job3ID << " status: " << json::parse(js.JobStatus(job3))["status"] << endl
+    cout << "Job ID " << job3ID << " status: " << json::parse(js.JobStatus(job3))["status"] << endl;
+    cout << "Job ID " << job4ID << " status: " << json::parse(js.JobStatus(job4))["status"] << endl;
+    cout << "Job ID " << job5ID << " status: " << json::parse(js.JobStatus(job5))["status"] << endl;
+    cout << "Job ID " << job6ID << " status: " << json::parse(js.JobStatus(job6))["status"] << endl
          << endl;
 
     // Check job status and try to complete the jobs
-    string output1, output2, output3;
+    string output1, output2, output3, output4, output5, output6;
 
     while (json::parse(js.AreJobsRunning())["are_jobs_running"])
     {
@@ -162,6 +171,9 @@ int main()
     output1 = json::parse(js.CompleteJob(job1))["output"];
     output2 = json::parse(js.CompleteJob(job2))["output"];
     output3 = json::parse(js.CompleteJob(job3))["output"];
+    output4 = json::parse(js.CompleteJob(job4))["output"];
+    output5 = json::parse(js.CompleteJob(job5))["output"];
+    output6 = json::parse(js.CompleteJob(job6))["output"];
 
     // Print job outputs
     cout << "Job ID " << job1ID << " output: " << output1 << endl
@@ -170,11 +182,20 @@ int main()
          << endl;
     cout << "Job ID " << job3ID << " output: " << output3 << endl
          << endl;
+    cout << "Job ID " << job4ID << " output: " << output4 << endl
+         << endl;
+    cout << "Job ID " << job5ID << " output: " << output5 << endl
+         << endl;
+    cout << "Job ID " << job6ID << " output: " << output6 << endl
+         << endl;
 
     // Get Job statuses
     cout << "Job ID " << job1ID << " status: " << json::parse(js.JobStatus(job1))["status"] << endl;
     cout << "Job ID " << job2ID << " status: " << json::parse(js.JobStatus(job2))["status"] << endl;
     cout << "Job ID " << job3ID << " status: " << json::parse(js.JobStatus(job3))["status"] << endl;
+    cout << "Job ID " << job4ID << " status: " << json::parse(js.JobStatus(job4))["status"] << endl;
+    cout << "Job ID " << job5ID << " status: " << json::parse(js.JobStatus(job5))["status"] << endl;
+    cout << "Job ID " << job6ID << " status: " << json::parse(js.JobStatus(job6))["status"] << endl;
 
     // Destroy Job System
     js.DestroyJobSystem();
